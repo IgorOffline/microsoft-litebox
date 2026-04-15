@@ -135,7 +135,7 @@ impl<Platform: litebox::platform::RawPointerProvider> SyscallRequest<Platform> {
     pub fn try_from_raw(syscall_number: usize, ctx: &PtRegs) -> Result<Self, Errno> {
         let ctx = SyscallContext::from_pt_regs(ctx);
         let sysnr = u32::try_from(syscall_number).map_err(|_| Errno::ENOSYS)?;
-        let dispatcher = match TeeSyscallNr::try_from(sysnr).unwrap_or(TeeSyscallNr::Unknown) {
+        let dispatcher = match TeeSyscallNr::try_from(sysnr).map_err(|_| Errno::ENOSYS)? {
             TeeSyscallNr::Return => SyscallRequest::Return {
                 ret: ctx.syscall_arg(0),
             },
@@ -240,10 +240,7 @@ impl<Platform: litebox::platform::RawPointerProvider> SyscallRequest<Platform> {
                 buf: Platform::RawMutPointer::from_usize(ctx.syscall_arg(0)),
                 blen: ctx.syscall_arg(1),
             },
-            TeeSyscallNr::Unknown => {
-                return Err(Errno::ENOSYS);
-            }
-            _ => todo!(),
+            _ => return Err(Errno::ENOSYS),
         };
 
         Ok(dispatcher)
@@ -1131,7 +1128,7 @@ impl<Platform: litebox::platform::RawPointerProvider> LdelfSyscallRequest<Platfo
     pub fn try_from_raw(syscall_number: usize, ctx: &PtRegs) -> Result<Self, Errno> {
         let ctx = SyscallContext::from_pt_regs(ctx);
         let sysnr = u32::try_from(syscall_number).map_err(|_| Errno::ENOSYS)?;
-        let dispatcher = match LdelfSyscallNr::try_from(sysnr).unwrap_or(LdelfSyscallNr::Unknown) {
+        let dispatcher = match LdelfSyscallNr::try_from(sysnr).map_err(|_| Errno::ENOSYS)? {
             LdelfSyscallNr::Return => LdelfSyscallRequest::Return {
                 ret: ctx.syscall_arg(0),
             },
@@ -1180,7 +1177,7 @@ impl<Platform: litebox::platform::RawPointerProvider> LdelfSyscallRequest<Platfo
                 buf: Platform::RawMutPointer::from_usize(ctx.syscall_arg(0)),
                 num_bytes: ctx.syscall_arg(1),
             },
-            _ => todo!("implement ldelf syscall number: {}", sysnr),
+            _ => return Err(Errno::ENOSYS),
         };
 
         Ok(dispatcher)
